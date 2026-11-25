@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เกมทายไพ่แนวบาคาร่า</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: rgb(12, 14, 18);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .phone-frame {
+      width: 100%;
+      max-width: 420px;
+      height: 100vh;
+      max-height: 890px;
+      background-color: rgb(16, 48, 34);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85);
+    }
+
+    .dealer-stage {
+      position: relative;
+      height: 205px;
+      background: radial-gradient(circle at 50% 20%, rgb(135, 32, 32), rgb(48, 12, 14) 70%);
+      overflow: hidden;
+      border-bottom: 2px solid rgb(205, 165, 70);
+    }
+
+    .top-hud {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 5;
+    }
+
+    .balance-pill {
+      background-color: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .coin-dot {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background-color: gold;
+      color: black;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .phase-badge {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgb(42, 36, 18), rgb(18, 16, 10));
+      border: 2px solid rgb(225, 190, 95);
+      color: rgb(255, 225, 125);
+      font-size: 11px;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 4px;
+      line-height: 1.25;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+    }
+
+    .dealer-svg-wrap {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .shuffling-hands {
+      animation: shuffleMove 0.35s ease-in-out infinite alternate;
+      transform-origin: center;
+    }
+
+    @keyframes shuffleMove {
+      0% { transform: translateX(-5px) rotate(-2deg); }
+      100% { transform: translateX(5px) rotate(2deg); }
+    }
+
+    .table-info-strip {
+      background-color: rgba(0, 0, 0, 0.65);
+      color: rgb(180, 235, 200);
+      font-size: 11px;
+      padding: 4px 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .result-banner {
+      position: absolute;
+      top: 224px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.75);
+      width: 88%;
+      background: linear-gradient(90deg, rgba(16, 15, 12, 0.94), rgba(76, 58, 16, 0.97), rgba(16, 15, 12, 0.94));
+      border: 1.5px solid gold;
+      border-radius: 7px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: rgb(255, 224, 90);
+      font-size: 19px;
+      font-weight: 900;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.9);
+      z-index: 25;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.2, 1.35, 0.4, 1);
+    }
+
+    .result-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    .result-banner.lose {
+      background: linear-gradient(90deg, rgba(22, 10, 12, 0.95), rgba(92, 20, 24, 0.97), rgba(22, 10, 12, 0.95));
+      border-color: rgb(255, 95, 95);
+      color: rgb(255, 130, 130);
+    }
+
+    .result-banner.even {
+      background: linear-gradient(90deg, rgba(18, 22, 26, 0.95), rgba(45, 58, 70, 0.97), rgba(18, 22, 26, 0.95));
+      border-color: rgb(190, 215, 235);
+      color: rgb(225, 240, 255);
+    }
+
+    .coin-stack-icon {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .coin-disc {
+      width: 22px;
+      height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, rgb(210, 150, 15), rgb(255, 235, 120), rgb(185, 125, 10));
+      border: 1px solid rgb(110, 70, 0);
+    }
+
+    .bet-area {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 0.85fr 1fr;
+      gap: 5px;
+      padding: 6px 8px;
+      background: linear-gradient(180deg, rgb(22, 85, 52), rgb(16, 58, 38));
+    }
+
+    .bet-box {
+      position: relative;
+      border: 1.5px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.16s ease, background-color 0.25s ease;
+    }
+
+    .bet-box:active {
+      transform: scale(0.96);
+    }
+
+    .bet-box.player {
+      background: linear-gradient(180deg, rgba(26, 108, 175, 0.78), rgba(14, 58, 98, 0.88));
+    }
+
+    .bet-box.tie {
+      background: linear-gradient(180deg, rgba(28, 138, 72, 0.78), rgba(14, 76, 38, 0.88));
+    }
+
+    .bet-box.banker {
+      background: linear-gradient(180deg, rgba(165, 36, 36, 0.78), rgba(92, 18, 18, 0.88));
+    }
+
+    .bet-box.winner-glow {
+      border: 2px solid gold;
+      box-shadow: 0 0 14px rgba(255, 215, 0, 0.85);
+    }
+
+    .bet-title {
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .bet-odds {
+      font-size: 10px;
+      opacity: 0.88;
+    }
+
+    .bet-chip-tag {
+      display: inline-block;
+      margin-top: 4px;
+      background: linear-gradient(180deg, rgb(255, 232, 115), rgb(218, 165, 25));
+      color: black;
+      border: 1.5px solid rgb(120, 80, 0);
+      font-weight: 900;
+      font-size: 12px;
+      padding: 1px 8px;
+      border-radius: 5px;
+    }
+
+    .win-medal {
+      position: absolute;
+      bottom: -8px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgb(255, 240, 140), rgb(205, 145, 15));
+      border: 2px solid white;
+      color: rgb(90, 50, 0);
+      font-size: 10px;
+      font-weight: 900;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+      animation: medalPop 0.45s ease;
+    }
+
+    .win-medal.left { left: 2px; }
+    .win-medal.center { left: 50%; transform: translateX(-50%); }
+    .win-medal.right { right: 2px; }
+    .win-medal.show { display: flex; }
+
+    @keyframes medalPop {
+      0% { transform: scale(0.2) rotate(-30deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 8px;
+      background-color: rgba(0, 0, 0, 0.45);
+    }
+
+    .chips-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .chip {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2.5px dashed white;
+      background-color: rgb(42, 46, 56);
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .chip.active {
+      background-color: rgb(230, 125, 10);
+      transform: scale(1.12);
+      box-shadow: 0 0 8px gold;
+    }
+
+    .cards-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .hand-panel {
+      padding: 6px 6px 8px 6px;
+      color: white;
+    }
+
+    .hand-panel.player {
+      background: linear-gradient(180deg, rgb(20, 82, 128), rgb(12, 52, 84));
+    }
+
+    .hand-panel.banker {
+      background: linear-gradient(180deg, rgb(85, 22, 22), rgb(48, 12, 12));
+    }
+
+    .hand-header {
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .hand-name {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .hand-panel.banker .hand-name,
+    .hand-panel.banker .hand-score {
+      color: rgb(255, 95, 95);
+    }
+
+    .hand-score {
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .cards-slot {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      min-height: 74px;
+    }
+
+    .card {
+      width: 46px;
+      height: 68px;
+      background-color: white;
+      color: black;
+      border-radius: 5px;
+      padding: 3px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-weight: 900;
+      font-size: 13px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.65);
+      animation: dealStepCard 0.55s cubic-bezier(0.2, 1.25, 0.4, 1);
+    }
+
+    .card.sideways-left {
+      transform: rotate(-90deg);
+      margin-right: 8px;
+      animation: dealSideCardLeft 0.55s cubic-bezier(0.2, 1.25, 0.4, 1);
+    }
+
+    .card.sideways-right {
+      transform: rotate(90deg);
+      margin-left: 8px;
+      animation: dealSideCardRight 0.55s cubic-bezier(0.2, 1.25, 0.4, 1);
+    }
+
+    @keyframes dealStepCard {
+      0% { opacity: 0; transform: translateY(-32px) scale(0.7); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes dealSideCardLeft {
+      0% { opacity: 0; transform: translateY(-28px) rotate(-90deg) scale(0.7); }
+      100% { opacity: 1; transform: translateY(0) rotate(-90deg) scale(1); }
+    }
+
+    @keyframes dealSideCardRight {
+      0% { opacity: 0; transform: translateY(-28px) rotate(90deg) scale(0.7); }
+      100% { opacity: 1; transform: translateY(0) rotate(90deg) scale(1); }
+    }
+
+    .card.red {
+      color: crimson;
+    }
+
+    .card-suit-big {
+      font-size: 18px;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .roadmap-box {
+      background-color: white;
+      padding: 5px 6px;
+      border-top: 2px solid rgb(180, 180, 180);
+    }
+
+    .roadmap-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: rgb(40, 40, 40);
+      margin-bottom: 4px;
+    }
+
+    .pills {
+      display: flex;
+      gap: 4px;
+    }
+
+    .pill {
+      color: white;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+    }
+
+    .pill.p { background-color: rgb(22, 108, 178); }
+    .pill.b { background-color: rgb(185, 36, 36); }
+    .pill.t { background-color: rgb(32, 145, 72); }
+
+    .roadmap-grid {
+      display: grid;
+      grid-template-rows: repeat(6, 20px);
+      grid-auto-flow: column;
+      grid-auto-columns: 20px;
+      overflow-x: auto;
+      border-top: 1px solid rgb(210, 210, 210);
+      border-left: 1px solid rgb(210, 210, 210);
+    }
+
+    .cell {
+      width: 20px;
+      height: 20px;
+      border-right: 1px solid rgb(210, 210, 210);
+      border-bottom: 1px solid rgb(210, 210, 210);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .bead {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      color: white;
+      font-size: 9px;
+      font-weight: 900;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: beadDrop 0.4s ease;
+    }
+
+    @keyframes beadDrop {
+      0% { transform: scale(0.2); }
+      100% { transform: scale(1); }
+    }
+
+    .bead.P { background-color: rgb(22, 108, 178); }
+    .bead.B { background-color: rgb(185, 36, 36); }
+    .bead.T { background-color: rgb(32, 145, 72); }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="dealer-stage">
+      <div class="top-hud">
+        <div class="balance-pill">
+          <span class="coin-dot">S</span>
+          <span id="balanceText">1,000.00</span>
+        </div>
+        <div class="phase-badge" id="phaseBadge">ลงชิปเพื่อ<br>เริ่มเล่น</div>
+      </div>
+
+      <div class="dealer-svg-wrap">
+        <svg viewBox="0 0 420 205" width="100%" height="100%">
+          <ellipse cx="210" cy="46" rx="34" ry="42" fill="rgb(24,18,18)" />
+          <path d="M168 114 Q210 88 252 114 L266 150 L154 150 Z" fill="rgb(245,204,178)" />
+          <path d="M180 108 L195 138 L206 118 L214 118 L225 138 L240 108 L228 102 L210 112 L192 102 Z" fill="rgb(20,20,24)" />
+          <rect x="201" y="80" width="18" height="24" rx="8" fill="rgb(245,204,178)" />
+          <ellipse cx="210" cy="54" rx="22" ry="27" fill="rgb(248,210,185)" />
+          <path d="M186 50 Q192 22 210 22 Q228 22 234 50 Q226 34 210 34 Q194 34 186 50 Z" fill="rgb(24,18,18)" />
+          <circle cx="202" cy="53" r="2.2" fill="rgb(35,25,25)" />
+          <circle cx="218" cy="53" r="2.2" fill="rgb(35,25,25)" />
+          <path d="M204 66 Q210 71 216 66" stroke="rgb(195,75,85)" stroke-width="2" fill="none" stroke-linecap="round" />
+
+          <path d="M20 144 L400 144 L420 205 L0 205 Z" fill="rgb(20,108,68)" stroke="rgb(218,178,75)" stroke-width="2" />
+          <line x1="210" y1="150" x2="210" y2="200" stroke="rgb(218,178,75)" stroke-width="2" />
+          <text x="148" y="164" fill="rgb(35,145,235)" font-size="14" font-weight="900" text-anchor="middle">PLAYER</text>
+          <text x="272" y="164" fill="rgb(235,65,65)" font-size="14" font-weight="900" text-anchor="middle">BANKER</text>
+
+          <g id="dealerHands">
+            <ellipse cx="195" cy="140" rx="16" ry="9" fill="rgb(245,204,178)" />
+            <ellipse cx="222" cy="142" rx="16" ry="9" fill="rgb(240,196,168)" />
+            <rect x="196" y="134" width="24" height="14" rx="2" fill="white" stroke="rgb(180,40,40)" stroke-width="1.5" />
+          </g>
+
+          <polygon points="34,154 72,154 64,192 24,192" fill="rgba(220,240,255,0.35)" stroke="white" stroke-width="1.5" />
+          <rect x="36" y="162" width="26" height="18" fill="rgb(175,35,35)" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="table-info-strip">
+      <span id="shuffleNote">ระบบเปิดไพ่และสับไพ่ให้อัตโนมัติ</span>
+      <span id="deckCountText">ไพ่ในขอน: 52</span>
+    </div>
+
+    <div class="result-banner" id="resultBanner">
+      <div class="coin-stack-icon" id="coinStack">
+        <div class="coin-disc"></div>
+        <div class="coin-disc"></div>
+        <div class="coin-disc"></div>
+      </div>
+      <span id="resultText">ชนะ +0.00</span>
+    </div>
+
+    <div class="bet-area">
+      <div class="bet-box player" id="boxP" onclick="placeBet('P')">
+        <div class="bet-title">ผู้เล่น</div>
+        <div class="bet-odds">1:1</div>
+        <div class="bet-chip-tag" id="betPText">0</div>
+        <div class="win-medal left" id="medalP">WIN</div>
+      </div>
+
+      <div class="bet-box tie" id="boxT" onclick="placeBet('T')">
+        <div class="bet-title">เสมอ</div>
+        <div class="bet-odds">1:8</div>
+        <div class="bet-chip-tag" id="betTText">0</div>
+        <div class="win-medal center" id="medalT">TIE</div>
+      </div>
+
+      <div class="bet-box banker" id="boxB" onclick="placeBet('B')">
+        <div class="bet-title">เจ้ามือ</div>
+        <div class="bet-odds">1:1</div>
+        <div class="bet-chip-tag" id="betBText">0</div>
+        <div class="win-medal right" id="medalB">WIN</div>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <div class="chips-group">
+        <button class="chip active" onclick="selectChip(10, this)">10</button>
+        <button class="chip" onclick="selectChip(50, this)">50</button>
+        <button class="chip" onclick="selectChip(100, this)">100</button>
+        <button class="chip" onclick="selectChip(500, this)">500</button>
+      </div>
+    </div>
+
+    <div class="cards-stage">
+      <div class="hand-panel player">
+        <div class="hand-header">
+          <span class="hand-name">ผู้เล่น</span>
+          <span class="hand-score" id="scoreP">0</span>
+        </div>
+        <div class="cards-slot" id="cardsP"></div>
+      </div>
+
+      <div class="hand-panel banker">
+        <div class="hand-header">
+          <span class="hand-score" id="scoreB">0</span>
+          <span class="hand-name">เจ้ามือ</span>
+        </div>
+        <div class="cards-slot" id="cardsB"></div>
+      </div>
+    </div>
+
+    <div class="roadmap-box">
+      <div class="roadmap-top">
+        <span>ตารางเค้าไพ่</span>
+        <div class="pills">
+          <span class="pill p" id="countP">P: 0</span>
+          <span class="pill b" id="countB">B: 0</span>
+          <span class="pill t" id="countT">T: 0</span>
+        </div>
+      </div>
+      <div class="roadmap-grid" id="roadmapGrid"></div>
+    </div>
+  </div>
+
+  <script>
+    let balance = 1000;
+    let selectedChip = 10;
+    let betP = 0;
+    let betT = 0;
+    let betB = 0;
+    let deck = [];
+    let history = [];
+    let audioCtx = null;
+    let isDealing = false;
+    let autoDealTimer = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, type, duration, delay, vol) {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+      gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + duration);
+    }
+
+    function playChipSound() {
+      playTone(1400, 'sine', 0.06, 0, 0.15);
+      playTone(2100, 'triangle', 0.05, 0.02, 0.1);
+    }
+
+    function playCardSound() {
+      playTone(680, 'triangle', 0.06, 0, 0.12);
+    }
+
+    function playShuffleSound() {
+      for (let i = 0; i < 6; i++) {
+        playTone(320 + (i * 45), 'triangle', 0.06, i * 0.09, 0.12);
+      }
+    }
+
+    function playWinSound() {
+      playTone(523.25, 'triangle', 0.16, 0.00, 0.18);
+      playTone(659.25, 'triangle', 0.16, 0.12, 0.18);
+      playTone(783.99, 'triangle', 0.16, 0.24, 0.20);
+      playTone(1046.50, 'sine', 0.40, 0.36, 0.24);
+      playTone(1318.51, 'sine', 0.36, 0.42, 0.12);
+
+      const coinNotes = [2200, 2650, 3100, 2850, 3400];
+      for (let i = 0; i < coinNotes.length; i++) {
+        playTone(coinNotes[i], 'sine', 0.12, 0.40 + (i * 0.08), 0.10);
+      }
+    }
+
+    function playLoseSound() {
+      playTone(330, 'triangle', 0.18, 0.00, 0.14);
+      playTone(247, 'triangle', 0.28, 0.18, 0.14);
+    }
+
+    function animateDealerHands(ms) {
+      const hands = document.getElementById('dealerHands');
+      hands.classList.add('shuffling-hands');
+      setTimeout(() => {
+        hands.classList.remove('shuffling-hands');
+      }, ms);
+    }
+
+    function buildShuffledDeck() {
+      const suits = ['♠', '♥', '♦', '♣'];
+      const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+      const newDeck = [];
+      for (let s of suits) {
+        for (let r of ranks) {
+          let val = parseInt(r);
+          if (r === 'A') val = 1;
+          if (['10', 'J', 'Q', 'K'].includes(r)) val = 0;
+          newDeck.push({ rank: r, suit: s, value: val });
+        }
+      }
+      for (let i = newDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = newDeck[i];
+        newDeck[i] = newDeck[j];
+        newDeck[j] = temp;
+      }
+      return newDeck;
+    }
+
+    function autoShuffleDeck(reasonMsg) {
+      deck = buildShuffledDeck();
+      animateDealerHands(1000);
+      playShuffleSound();
+      document.getElementById('phaseBadge').innerHTML = 'ระบบ<br>สับไพ่';
+      document.getElementById('shuffleNote').innerText = reasonMsg;
+      setTimeout(() => {
+        if (isDealing) {
+          document.getElementById('phaseBadge').innerHTML = 'กำลัง<br>เปิดไพ่';
+        }
+        document.getElementById('shuffleNote').innerText = 'ระบบเปิดไพ่และสับไพ่ให้อัตโนมัติ';
+      }, 1100);
+      updateUI();
+    }
+
+    function selectChip(amount, el) {
+      if (isDealing) return;
+      selectedChip = amount;
+      playChipSound();
+      document.querySelectorAll('.chip').forEach(btn => btn.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    function placeBet(side) {
+      if (isDealing) return;
+      if (balance < selectedChip) return;
+
+      balance -= selectedChip;
+      if (side === 'P') betP += selectedChip;
+      if (side === 'T') betT += selectedChip;
+      if (side === 'B') betB += selectedChip;
+
+      playChipSound();
+      document.getElementById('resultBanner').classList.remove('show');
+      updateUI();
+      scheduleAutoDeal();
+    }
+
+    function scheduleAutoDeal() {
+      clearTimeout(autoDealTimer);
+      document.getElementById('phaseBadge').innerHTML = 'รอเปิด<br>ไพ่เอง';
+      autoDealTimer = setTimeout(() => {
+        startAutoRound();
+      }, 1600);
+    }
+
+    function calcScore(cards) {
+      let sum = 0;
+      for (let c of cards) sum += c.value;
+      return sum % 10;
+    }
+
+    function renderSideCards(containerId, cards, side) {
+      const box = document.getElementById(containerId);
+      box.innerHTML = '';
+      if (side === 'P' && cards.length === 3) {
+        const c3 = cards[2];
+        const red3 = (c3.suit === '♥' || c3.suit === '♦') ? 'red' : '';
+        box.innerHTML += '<div class="card sideways-left ' + red3 + '"><div>' + c3.rank + ' ' + c3.suit + '</div><div class="card-suit-big">' + c3.suit + '</div></div>';
+      }
+      const mainCount = Math.min(2, cards.length);
+      for (let i = 0; i < mainCount; i++) {
+        const c = cards[i];
+        const isRed = (c.suit === '♥' || c.suit === '♦') ? 'red' : '';
+        box.innerHTML += '<div class="card ' + isRed + '"><div>' + c.rank + '<br>' + c.suit + '</div><div class="card-suit-big">' + c.suit + '</div></div>';
+      }
+      if (side === 'B' && cards.length === 3) {
+        const c3 = cards[2];
+        const red3 = (c3.suit === '♥' || c3.suit === '♦') ? 'red' : '';
+        box.innerHTML += '<div class="card sideways-right ' + red3 + '"><div>' + c3.rank + ' ' + c3.suit + '</div><div class="card-suit-big">' + c3.suit + '</div></div>';
+      }
+    }
+
+    function renderRoadmap() {
+      const grid = document.getElementById('roadmapGrid');
+      const totalCells = Math.max(108, history.length + 12);
+      const cols = Math.ceil(totalCells / 6);
+      const cellCount = cols * 6;
+
+      let html = '';
+      for (let i = 0; i < cellCount; i++) {
+        if (i < history.length) {
+          const code = history[i];
+          html += '<div class="cell"><div class="bead ' + code + '">' + code + '</div></div>';
+        } else {
+          html += '<div class="cell"></div>';
+        }
+      }
+      grid.innerHTML = html;
+
+      let pNum = 0;
+      let bNum = 0;
+      let tNum = 0;
+      for (let item of history) {
+        if (item === 'P') pNum++;
+        else if (item === 'B') bNum++;
+        else tNum++;
+      }
+      document.getElementById('countP').innerText = 'P: ' + pNum;
+      document.getElementById('countB').innerText = 'B: ' + bNum;
+      document.getElementById('countT').innerText = 'T: ' + tNum;
+    }
+
+    function showResultBanner(netChange) {
+      const banner = document.getElementById('resultBanner');
+      const textEl = document.getElementById('resultText');
+      const coinEl = document.getElementById('coinStack');
+
+      banner.classList.remove('lose', 'even', 'show');
+      void banner.offsetWidth;
+
+      if (netChange > 0) {
+        textEl.innerText = 'ชนะ +' + netChange.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        coinEl.style.display = 'flex';
+        banner.classList.add('show');
+        playWinSound();
+      } else if (netChange < 0) {
+        const lostAmount = Math.abs(netChange);
+        textEl.innerText = 'เสีย -' + lostAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        coinEl.style.display = 'none';
+        banner.classList.add('lose', 'show');
+        playLoseSound();
+      } else {
+        textEl.innerText = 'คืนทุน 0.00';
+        coinEl.style.display = 'none';
+        banner.classList.add('even', 'show');
+      }
+    }
+
+    function startAutoRound() {
+      if (isDealing) return;
+      if (betP === 0 && betT === 0 && betB === 0) return;
+
+      isDealing = true;
+      if (deck.length < 10) {
+        autoShuffleDeck('ไพ่ใกล้หมด ระบบสับขอนใหม่');
+      }
+
+      document.getElementById('phaseBadge').innerHTML = 'กำลัง<br>เปิดไพ่';
+      document.getElementById('boxP').classList.remove('winner-glow');
+      document.getElementById('boxT').classList.remove('winner-glow');
+      document.getElementById('boxB').classList.remove('winner-glow');
+      document.getElementById('medalP').classList.remove('show');
+      document.getElementById('medalT').classList.remove('show');
+      document.getElementById('medalB').classList.remove('show');
+
+      const shownP = [];
+      const shownB = [];
+      renderSideCards('cardsP', shownP, 'P');
+      renderSideCards('cardsB', shownB, 'B');
+      document.getElementById('scoreP').innerText = '0';
+      document.getElementById('scoreB').innerText = '0';
+
+      const p1 = deck.pop();
+      const b1 = deck.pop();
+      const p2 = deck.pop();
+      const b2 = deck.pop();
+
+      const steps = [
+        { side: 'P', card: p1 },
+        { side: 'B', card: b1 },
+        { side: 'P', card: p2 },
+        { side: 'B', card: b2 }
+      ];
+
+      const initPScore = calcScore([p1, p2]);
+      const initBScore = calcScore([b1, b2]);
+
+      if (initPScore <= 5) {
+        steps.push({ side: 'P', card: deck.pop() });
+      }
+      if (initBScore <= 5) {
+        steps.push({ side: 'B', card: deck.pop() });
+      }
+
+      updateUI();
+
+      let idx = 0;
+      const dealInterval = setInterval(() => {
+        if (idx >= steps.length) {
+          clearInterval(dealInterval);
+          setTimeout(() => {
+            settleRound(shownP, shownB);
+          }, 750);
+          return;
+        }
+
+        const current = steps[idx];
+        animateDealerHands(550);
+        playCardSound();
+
+        if (current.side === 'P') {
+          shownP.push(current.card);
+          renderSideCards('cardsP', shownP, 'P');
+          document.getElementById('scoreP').innerText = calcScore(shownP);
+        } else {
+          shownB.push(current.card);
+          renderSideCards('cardsB', shownB, 'B');
+          document.getElementById('scoreB').innerText = calcScore(shownB);
+        }
+
+        idx++;
+      }, 900);
+    }
+
+    function settleRound(finalPCards, finalBCards) {
+      const pScore = calcScore(finalPCards);
+      const bScore = calcScore(finalBCards);
+      const totalBet = betP + betT + betB;
+      let payout = 0;
+
+      if (pScore === bScore) {
+        payout = (betT * 9) + betP + betB;
+        balance += payout;
+        history.push('T');
+        document.getElementById('boxT').classList.add('winner-glow');
+        document.getElementById('medalT').classList.add('show');
+      } else if (pScore > bScore) {
+        payout = betP * 2;
+        balance += payout;
+        history.push('P');
+        document.getElementById('boxP').classList.add('winner-glow');
+        document.getElementById('medalP').classList.add('show');
+      } else {
+        payout = betB * 2;
+        balance += payout;
+        history.push('B');
+        document.getElementById('boxB').classList.add('winner-glow');
+        document.getElementById('medalB').classList.add('show');
+      }
+
+      const netChange = payout - totalBet;
+      showResultBanner(netChange);
+
+      betP = 0;
+      betT = 0;
+      betB = 0;
+      isDealing = false;
+      document.getElementById('phaseBadge').innerHTML = 'ลงชิปเพื่อ<br>เริ่มเล่น';
+
+      renderRoadmap();
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById('balanceText').innerText = balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('betPText').innerText = betP.toLocaleString();
+      document.getElementById('betTText').innerText = betT.toLocaleString();
+      document.getElementById('betBText').innerText = betB.toLocaleString();
+      document.getElementById('deckCountText').innerText = 'ไพ่ในขอน: ' + deck.length;
+    }
+
+    autoShuffleDeck('เริ่มขอนใหม่ ระบบสับไพ่ให้อัตโนมัติ');
+    renderRoadmap();
+    updateUI();
+  </script>
+</body>
+</html>
